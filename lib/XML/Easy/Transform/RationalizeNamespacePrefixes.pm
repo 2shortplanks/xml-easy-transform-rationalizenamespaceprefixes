@@ -1,7 +1,7 @@
 package XML::Easy::Transform::RationalizeNamespacePrefixes;
 use base qw(Exporter);
 
-our @EXPORT;
+our @EXPORT_OK;
 
 use strict;
 use warnings;
@@ -128,7 +128,7 @@ Will be transformed into
     
     return XML::Easy::Element->new($dest_element->type_name, $attr, $dest_element->content_object);
   }
-  push @EXPORT, "rationalize_namespace_prefixes";
+  push @EXPORT_OK, "rationalize_namespace_prefixes";
 
   sub _rnp {
     my $element = shift;
