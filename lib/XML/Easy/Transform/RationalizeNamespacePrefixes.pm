@@ -143,7 +143,7 @@ Will be transformed into
     # change the name of the element
     my $attr = $element->attributes;
     foreach (sort keys %{ $attr }) {
-      next unless /^xmlns(?::(.*))?$/;
+      next unless /\Axmlns(?::(.*))?\z/;
       my $prefix = defined $1 ? $1 : "";
       my $ns     = $attr->{$_};
 
@@ -180,7 +180,7 @@ Will be transformed into
     }
 
     # munge the prefix on the main element
-    $element->type_name =~ /^([^:]+)(?::(.*))?$/
+    $element->type_name =~ /\A([^:]+)(?::(.*))?\z/
       or die "Invalid element name '".$element->type_name."'";
     my $prefix     = defined ($2) ? $1 : "";
     my $local_name = defined ($2) ? $2 : $1;
@@ -204,7 +204,7 @@ Will be transformed into
     # munge the prefix on the attribute elements
     my $new_attr = {};
     foreach (keys %{ $attr }) {
-      /^([^:]+)(?::(.*))?$/
+      /\A([^:]+)(?::(.*))?\z/
         or die "Invalid attribute name '$_'";
       my $prefix     = defined ($2) ? $1 : "";
       my $local_name = defined ($2) ? $2 : $1;
