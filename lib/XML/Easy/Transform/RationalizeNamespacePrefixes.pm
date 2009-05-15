@@ -90,9 +90,6 @@ Will be transformed into
 =cut
 
 {
-  our $prefix_generator;
-
-
   my %default_known_prefixes = (
     # include these as we're not meant to freak out if these namespaces are used
     xml => "http://www.w3.org/XML/1998/namespace",
@@ -103,19 +100,18 @@ Will be transformed into
   );
 
   # this holds the namespaces that we've assigned.
-  my %assigned_prefixes;
-  my %assigned_ns;
 
   sub rationalize_namespace_prefixes ($;&) {
     my $source_element = shift;
-    local $prefix_generator = shift || \&_prefix_generator;
+    my $prefix_generator = shift || \&_prefix_generator;
 
     # create the modified tree and populate our two local hashes with
     # the namespaces we should have
 
-    %assigned_prefixes = ();
-    %assigned_ns = ();
-    my $dest_element = _rnp($source_element, \%default_known_prefixes);
+    my %assigned_prefixes;
+    my %assigned_ns;
+
+    my $dest_element = _rnp($source_element, $prefix_generator, \%default_known_prefixes, \%assigned_prefixes, \%assigned_ns);
     
     # we now have a tree with *no* namespaces.  Replace the top of that
     # tree with a new element that is the same as the top element of the tree but
@@ -131,10 +127,11 @@ Will be transformed into
   push @EXPORT_OK, "rationalize_namespace_prefixes";
 
   sub _rnp {
-    my $element = shift;
-
-    # what namespaces are in scope at the momement
-    my $known_prefixes = shift;
+    my $element           = shift;
+    my $prefix_generator  = shift;
+    my $known_prefixes    = shift;
+    my $assigned_prefixes = shift;
+    my $assigned_ns       = shift;
 
     # boolean that indicates if known_* is our copy or the
     # version passed in (has it been copy-on-write-ed)
@@ -166,15 +163,15 @@ Will be transformed into
       # record that this prefix maps to this namespace;
       $known_prefixes->{ $prefix } = $ns;
 
-      unless ($assigned_ns{ $ns }) {
+      unless ($assigned_ns->{ $ns }) {
         # find an unused unique prefix in the destination.
-        while (exists $assigned_prefixes{ $prefix }) {
+        while (exists $assigned_prefixes->{ $prefix }) {
           $prefix = $prefix_generator->($prefix);
         }
 
         # remember that we're mapping that way
-        $assigned_prefixes{ $prefix } = $ns;
-        $assigned_ns{ $ns } = $prefix;
+        $assigned_prefixes->{ $prefix } = $ns;
+        $assigned_ns->{ $ns } = $prefix;
       }
 
     }
@@ -189,15 +186,15 @@ Will be transformed into
     # then look up the corrisponding prefix in the destination document
     my $element_ns;
     my $new_element_prefix;
-    if ($prefix eq "" && !exists($assigned_prefixes{""})) {
+    if ($prefix eq "" && !exists($assigned_prefixes->{""})) {
       # someone just used the default (empty) prefix for the first time without having
       # declared an explict namespace.  Remember that the empty namespace exists.
-      $element_ns = $assigned_prefixes{""} = "";
-      $new_element_prefix = $assigned_ns{""} = "";
+      $element_ns = $assigned_prefixes->{""} = "";
+      $new_element_prefix = $assigned_ns->{""} = "";
     } else {
       $element_ns = $known_prefixes->{ $prefix };
       unless (defined $element_ns) { die "Prefix '$prefix' has no registered namespace" }
-      $new_element_prefix = $assigned_ns{ $element_ns };
+      $new_element_prefix = $assigned_ns->{ $element_ns };
     }
     my $new_element_name = (length $new_element_prefix) ? "$new_element_prefix:$local_name" : $local_name;
 
@@ -217,7 +214,7 @@ Will be transformed into
       # then look up the corrisponding prefix in the destination document
       my $ns = $prefix eq "" ? $element_ns : $known_prefixes->{ $prefix };
       unless (defined $ns) { die "Prefix '$prefix' has no registered namespace" }
-      my $new_prefix = $assigned_ns{ $ns };
+      my $new_prefix = $assigned_ns->{ $ns };
       
       my $final_name = ($new_prefix ne $new_element_prefix) ? "$new_prefix:$local_name" : $local_name;
       $new_attr->{ $final_name } = $attr->{ $_ };
@@ -229,7 +226,7 @@ Will be transformed into
     while (@content) {
       push @new_content, shift @content;
       if (@content) {
-        push @new_content, _rnp((shift @content), $known_prefixes);
+        push @new_content, _rnp((shift @content), $prefix_generator, $known_prefixes, $assigned_prefixes, $assigned_ns);
       }
     }
     
