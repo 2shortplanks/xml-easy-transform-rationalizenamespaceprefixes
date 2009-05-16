@@ -1,17 +1,22 @@
 package XML::Easy::Transform::RationalizeNamespacePrefixes;
 use base qw(Exporter);
 
-our @EXPORT_OK;
-
 use strict;
 use warnings;
+
+our $VERSION = "1.00";
+our @EXPORT_OK;
+
+=head1 NAME
+
+XML::Easy::Transform::RationalizeNamespacePrefixes - rationalize namespaces prefixes
 
 =head1 SYNOPSIS
 
   use XML::Easy::Transform::RationalizeNamespacePrefixes qw(
      rationalize_namespace_prefixes
   );
-  
+
   my $doc = rationalize_namespace_prefixes(
      xml10_read_document($text)
   );
@@ -25,67 +30,26 @@ but with all namespace declartions moved to the top node of the tree
 (this may involve renaming several elements in the tree to have different
 prefixes.)
 
-For example:
+It supplies one public function that can do this transformation which is
+exported on request:
 
-  sub process($) {
-    return xml10_write_document(
-      rationalize_namespace_prefixes(
-        xml10_read_document( $_[0] )
-      ),"UTF-8"
-    );
-  }
-  
-  print process <<'XML';
-  <foo>
-    <ex1:bar xmlns:ex1="http://www.twoshortplanks.com/namespace/example/1"/>
-  </foo>
-  XML
+=over
 
-Moves the namespace up and prints:
+=item rationalize_namespace_prefixes($easy_element)
 
-  <foo xmlns:ex1="http://www.twoshortplanks.com/namespace/example/1">
-    <ex1:bar/>
-  </foo>
+=item rationalize_namespace_prefixes($easy_element, $generator_subref)
 
-The routine will also create prefixes as needed:
+The first argument is a B<XML::Easy::Element> that you wish a transformed
+copy of to be returned.  An exception will be thrown if thrown if the
+XML document breaches the XML Namespaces 1.0 specification.
 
-  print process <<'XML';
-  <foo>
-    <bar xmlns="http://www.twoshortplanks.com/namespace/example/1"/>
-  </foo>
-  XML
+The second (optional) argument is a reference to a function that should,
+when passed a string containing a xml prefix as its first argument, will
+return a string containing an alternative xml prefix.  If no function is
+passed in then the default implementation is used.
 
-Prints
-
-  <foo xmlns:default2="http://www.twoshortplanks.com/namespace/example/1">
-    <default2:bar/> 
-  </foo>
-
-It even copes with conflicting prefixes:
-
-  print process <<'XML';
-  <muppet:kermit xmlns:muppet="http://www.twoshortplanks.com/namespace/example/muppetshow">
-    <muppet:kermit xmlns:muppet="http://www.twoshortplanks.com/namespace/example/seasmestreet" />
-  </muppet:kermit>
-  XML
-
-Prints
-
-  <muppet:kermit xmlns:muppet="http://www.twoshortplanks.com/namespace/example/muppetshow" xmlns:muppet2="http://www.twoshortplanks.com/namespace/example/seasmestreet">
-    <muppet2:kermit/>
-  </muppet:kermit>
-
-This module also removes all unnecessary prefixes on attributes:
-
-  <wobble xmlns:ex1="http://www.twoshortplanks.com/namespace/example/1">
-    <ex1:wibble ex1:jelly="in my tummy"/>
-  </wobble>
-
-Will be transformed into
-
-  <wobble xmlns:ex1="http://www.twoshortplanks.com/namespace/example/1">
-    <ex1:wibble jelly="in my tummy"/>
-  </wobble>
+The new B<XML::Easy::Element> will be returned as the only return value
+of this function.
 
 =cut
 
@@ -94,7 +58,7 @@ Will be transformed into
     # include these as we're not meant to freak out if these namespaces are used
     xml => "http://www.w3.org/XML/1998/namespace",
     xmlns => "http://www.w3.org/2000/xmlns/",
-    
+
     # by default the empty string is bound to ""
     "" => "",
   );
@@ -112,16 +76,16 @@ Will be transformed into
     my %assigned_ns;
 
     my $dest_element = _rnp($source_element, $prefix_generator, \%default_known_prefixes, \%assigned_prefixes, \%assigned_ns);
-    
+
     # we now have a tree with *no* namespaces.  Replace the top of that
     # tree with a new element that is the same as the top element of the tree but
     # with the needed namespace declarations
-    
-    my $attr = +{ %{ $dest_element->attributes }, map {
+
+    my $attr = { %{ $dest_element->attributes }, map {
       ($_ ne "") ? ("xmlns:$_" => $assigned_prefixes{$_}) :
         ($assigned_prefixes{""} ne "") ? ( xmlns => $assigned_prefixes{""} ) : ()
     } keys %assigned_prefixes };
-    
+
     return XML::Easy::Element->new($dest_element->type_name, $attr, $dest_element->content_object);
   }
   push @EXPORT_OK, "rationalize_namespace_prefixes";
@@ -136,11 +100,11 @@ Will be transformed into
     # boolean that indicates if known_* is our copy or the
     # version passed in (has it been copy-on-write-ed)
     my $cowed = 0;
-    
+
     # change the name of the element
     my $attr = $element->attributes;
     foreach (sort keys %{ $attr }) {
-      next unless /\Axmlns(?::(.*))?\z/;
+      next unless /\Axmlns(?::(.*))?\z/msx;
       my $prefix = defined $1 ? $1 : "";
       my $ns     = $attr->{$_};
 
@@ -177,7 +141,7 @@ Will be transformed into
     }
 
     # munge the prefix on the main element
-    $element->type_name =~ /\A([^:]+)(?::(.*))?\z/
+    $element->type_name =~ /\A([^:]+)(?::(.*))?\z/msx
       or die "Invalid element name '".$element->type_name."'";
     my $prefix     = defined ($2) ? $1 : "";
     my $local_name = defined ($2) ? $2 : $1;
@@ -201,26 +165,26 @@ Will be transformed into
     # munge the prefix on the attribute elements
     my $new_attr = {};
     foreach (keys %{ $attr }) {
-      /\A([^:]+)(?::(.*))?\z/
+      /\A([^:]+)(?::(.*))?\z/msx
         or die "Invalid attribute name '$_'";
       my $prefix     = defined ($2) ? $1 : "";
       my $local_name = defined ($2) ? $2 : $1;
-      
+
       # skip the namespaces
       next if $prefix eq "" && $local_name eq "xmlns";
       next if $prefix eq "xmlns";
-      
+
       # map the prefix in the source document to a namespace,
       # then look up the corrisponding prefix in the destination document
       my $ns = $prefix eq "" ? $element_ns : $known_prefixes->{ $prefix };
       unless (defined $ns) { die "Prefix '$prefix' has no registered namespace" }
       my $new_prefix = $assigned_ns->{ $ns };
-      
+
       my $final_name = ($new_prefix ne $new_element_prefix) ? "$new_prefix:$local_name" : $local_name;
       $new_attr->{ $final_name } = $attr->{ $_ };
-      
+
     }
-    
+
     my @content = @{ $element->content };
     my @new_content;
     while (@content) {
@@ -229,7 +193,7 @@ Will be transformed into
         push @new_content, _rnp((shift @content), $prefix_generator, $known_prefixes, $assigned_prefixes, $assigned_ns);
       }
     }
-    
+
     return XML::Easy::Element->new( $new_element_name, $new_attr, \@new_content );
   }
 }
@@ -241,8 +205,108 @@ sub _prefix_generator {
   $prefix = "default" if $prefix eq "";
 
   # turn foo into foo2 and foo2 into foo3, etc.
-  $prefix .= "2" unless $prefix =~ s/(\d+)$/ $1 + 1 /e;
+  $prefix .= "2" unless $prefix =~ s/(\d+)$/ $1 + 1 /mxse;
 
   return $prefix;
 }
 
+=back
+
+=head1 EXAMPLES
+
+=head2 A Basic Transform
+
+After defining a handy utility function:
+
+  sub process($) {
+    return xml10_write_document(
+      rationalize_namespace_prefixes(
+        xml10_read_document( $_[0] )
+      ),"UTF-8"
+    );
+  }
+
+This code:
+
+  print process <<'XML';
+  <foo>
+    <ex1:bar xmlns:ex1="http://www.twoshortplanks.com/namespace/example/1"/>
+  </foo>
+  XML
+
+Moves the namespace up and prints:
+
+  <foo xmlns:ex1="http://www.twoshortplanks.com/namespace/example/1">
+    <ex1:bar/>
+  </foo>
+
+=head2 Creating Prefixes
+
+The routine will also create prefixes as needed:
+
+  print process <<'XML';
+  <foo>
+    <bar xmlns="http://www.twoshortplanks.com/namespace/example/1" />
+  </foo>
+  XML
+
+Prints
+
+  <foo xmlns:default2="http://www.twoshortplanks.com/namespace/example/1">
+    <default2:bar />
+  </foo>
+
+It even copes with conflicting prefixes:
+
+  print process <<'XML';
+  <muppet:kermit xmlns:muppet="http://www.twoshortplanks.com/namespace/example/muppetshow">
+    <muppet:kermit xmlns:muppet="http://www.twoshortplanks.com/namespace/example/seasmestreet" />
+  </muppet:kermit>
+  XML
+
+Prints
+
+  <muppet:kermit xmlns:muppet="http://www.twoshortplanks.com/namespace/example/muppetshow" xmlns:muppet2="http://www.twoshortplanks.com/namespace/example/seasmestreet">
+    <muppet2:kermit />
+  </muppet:kermit>
+
+=head2 Removing Unneeded Prefixes
+
+This module also removes all unnecessary prefixes on attributes:
+
+  <wobble xmlns:ex1="http://www.twoshortplanks.com/namespace/example/1">
+    <ex1:wibble ex1:jelly="in my tummy" />
+    <ex2:bobble xmlns:ex2="http://www.twoshortplanks.com/namespace/example/1" />
+  </wobble>
+
+Will be transformed into
+
+  <wobble xmlns:ex1="http://www.twoshortplanks.com/namespace/example/1">
+    <ex1:wibble jelly="in my tummy" />
+    <ex1:bobble />
+  </wobble>
+
+=head1 AUTHOR
+
+Written by Mark Fowler E<lt>mark@twoshortplanks.comE<gt>
+
+Copyright Photobox 2009.  All Rights Reserved.
+
+This program is free software; you can redistribute it
+and/or modify it under the same terms as Perl itself.
+
+=head1 BUGS
+
+None known.
+
+Please see http://www.twoshortplanks.com/project/xml-easy-transform-rationalizenamespaceprefix
+for details of how to submit bugs, access the source control
+for this project, and contact the author.
+
+=head1 SEE ALSO
+
+L<XML::Easy>, L<http://www.w3.org/TR/REC-xml-names/>
+
+=cut
+
+1;
