@@ -4,9 +4,9 @@ use strict;
 use File::Spec::Functions;
 use FindBin;
 use Test::More;
-unless ($ENV{PERL_CRITIC_TESTS} || $ENV{PERL_AUTHOR} || $ENV{THIS_IS_MARKF_YOU_BETCHA}) {
+unless ($ENV{PERL_CRITIC_TESTS} || $ENV{TEST_AUTHOR} || $ENV{THIS_IS_MARKF_YOU_BETCHA}) {
     Test::More::plan(
-        skip_all => "Test::Perl::Critic tests not enabled (set PERL_CRITIC_TESTS or PERL_AUTHOR env var)"
+        skip_all => "Test::Perl::Critic tests not enabled (set PERL_CRITIC_TESTS or TEST_AUTHOR env var)"
     );
 }
 unless (require Test::Perl::Critic) {
