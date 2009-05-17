@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 13;
+use Test::More tests => 16;
 
 use XML::Easy::Text qw(xml10_read_document xml10_write_element);
 use XML::Easy::Transform::RationalizeNamespacePrefixes qw(
@@ -82,7 +82,6 @@ XML
 </a>
 XML
 
-
 is process <<'XML', chompp <<'XML', "no default till later";
 <ex1:a xmlns:ex1="http://www.twoshortplanks.com/namespaces/example/1">
   <b xmlns="http://www.twoshortplanks.com/namespaces/example/2"/>
@@ -128,6 +127,28 @@ XML
   <ns3:e/>
 </a>
 XML
+
+eval {
+  process <<'XML'
+<bar xmlns::foo="bad ns"/>
+XML
+};
+like($@, qr/Specification violation: Can't have more than one colon in attribute name 'xmlns::foo'/, "bang - attr name 1/3");
+
+eval {
+  process <<'XML'
+<bar xmlns:fo:o="bad ns"/>
+XML
+};
+like($@, qr/Specification violation: Can't have more than one colon in attribute name 'xmlns:fo:o'/, "bang - attr name 2/3");
+
+eval {
+  process <<'XML'
+<bar xmlns:foo:="bad ns"/>
+XML
+};
+like($@, qr/Specification violation: Can't have more than one colon in attribute name 'xmlns:foo:'/, "bang - attr name 3/3");
+
 
 eval {
   process <<'XML'

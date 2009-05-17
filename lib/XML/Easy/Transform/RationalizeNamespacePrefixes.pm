@@ -110,6 +110,8 @@ of this function.
     # change the name of the element
     my $attr = $element->attributes;
     foreach (sort keys %{ $attr }) {
+      croak "Specification violation: Can't have more than one colon in attribute name '$_'"
+        if tr/:/:/ > 1;
       next unless my ($prefix) = /\Axmlns(?::(.*))?\z/msx;
       $prefix = "" unless defined $prefix;
       my $ns  = $attr->{$_};
@@ -338,8 +340,6 @@ contains a reserved xml element
   <foo xmlns="http://www.twoshotplanks.com/namespace/example/1">
     <xmlfoo/>
   </foo>
-
-This module does not throw errors if you use an name with more than one colon in it
 
 This module does not enforce the uniqueness of attributes correctly
 
