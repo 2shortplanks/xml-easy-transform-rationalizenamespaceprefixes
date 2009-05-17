@@ -83,10 +83,12 @@ of this function.
     # tree with a new element that is the same as the top element of the tree but
     # with the needed namespace declarations
 
-    my $attr = { %{ $dest_element->attributes }, map {
-      ($_ ne "") ? ("xmlns:$_" => $assigned_prefixes{$_}) :
-        ($assigned_prefixes{""} ne "") ? ( xmlns => $assigned_prefixes{""} ) : ()
-    } keys %assigned_prefixes };
+    my $attr = {  ## no critic  (stupid comma statement rule misfiring)
+      %{ $dest_element->attributes },
+      map { ($_ ne "") ? ("xmlns:$_" => $assigned_prefixes{$_}) :
+              ($assigned_prefixes{""} ne "") ? ( xmlns => $assigned_prefixes{""} ) : () }
+        keys %assigned_prefixes
+    };
 
     return XML::Easy::Element->new($dest_element->type_name, $attr, $dest_element->content_object);
   }
