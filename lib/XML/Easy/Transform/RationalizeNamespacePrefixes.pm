@@ -325,7 +325,19 @@ and/or modify it under the same terms as Perl itself.
 
 =head1 BUGS
 
-This module does not accept prefixes xml<something>, as defined by the spec
+This module currently prefers the default namespace even in situations where
+using it violates the specification.  For example:
+
+  <foo xmlns="http://www.twoshotplanks.com/namespace/example/1">
+    <ex:xmlfoo xmlns:ex="xmlns="http://www.twoshotplanks.com/namespace/example/1">
+  </foo>
+
+Will be errornously trasnformed into the following document that now
+contains a reserved xml element
+
+  <foo xmlns="http://www.twoshotplanks.com/namespace/example/1">
+    <xmlfoo/>
+  </foo>
 
 This module does not throw errors if you use an name with more than one colon in it
 
