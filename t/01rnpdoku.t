@@ -134,21 +134,21 @@ eval {
 <bar xmlns:xmlns="something else"/>
 XML
 };
-like($@, qr/^Specification violation: Can't assign any namespace to prefix 'xmlns'/, "bang - xmlns prefix");
+like($@, qr/Specification violation: Can't assign any namespace to prefix 'xmlns'/, "bang - xmlns prefix");
 
 eval {
   process <<'XML'
 <bar xmlns:xml="something else"/>
 XML
 };
-like($@, qr/^Specification violation: Can't assign 'something else' to prefix 'xml'/, "bang - xml prefix");
+like($@, qr/Specification violation: Can't assign 'something else' to prefix 'xml'/, "bang - xml prefix");
 
 eval {
   process <<'XML'
 <bar xmlns:something="http://www.w3.org/2000/xmlns/"/>
 XML
 };
-like($@, qr{^Specification violation: Can't assign 'http://www.w3.org/2000/xmlns/' to any prefix}, "bang - xmlns namespace");
+like($@, qr{Specification violation: Can't assign 'http://www.w3.org/2000/xmlns/' to any prefix}, "bang - xmlns namespace");
 
 
 eval {
@@ -163,4 +163,4 @@ eval {
 <foo:bar />
 XML
 };
-like($@, qr/^Prefix 'foo' has no registered namespace/, "bang - not reg");
+like($@, qr/Prefix 'foo' has no registered namespace/, "bang - not reg");

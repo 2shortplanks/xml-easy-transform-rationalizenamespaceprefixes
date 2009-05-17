@@ -7,6 +7,8 @@ use warnings;
 our $VERSION = "1.00";
 our @EXPORT_OK;
 
+use Carp::Clan;
+
 =head1 NAME
 
 XML::Easy::Transform::RationalizeNamespacePrefixes - rationalize namespaces prefixes
@@ -81,7 +83,7 @@ of this function.
     # tree with a new element that is the same as the top element of the tree but
     # with the needed namespace declarations
 
-    my $attr = { %{ $dest_element->attributes }, map {
+    my $attr = { %{ $dest_element->attributes }, map {  
       ($_ ne "") ? ("xmlns:$_" => $assigned_prefixes{$_}) :
         ($assigned_prefixes{""} ne "") ? ( xmlns => $assigned_prefixes{""} ) : ()
     } keys %assigned_prefixes };
@@ -104,18 +106,18 @@ of this function.
     # change the name of the element
     my $attr = $element->attributes;
     foreach (sort keys %{ $attr }) {
-      next unless /\Axmlns(?::(.*))?\z/msx;
-      my $prefix = defined $1 ? $1 : "";
-      my $ns     = $attr->{$_};
+      next unless my ($prefix) = /\Axmlns(?::(.*))?\z/msx;
+      $prefix = "" unless defined $prefix;
+      my $ns  = $attr->{$_};
 
       # check for things assigning namespaces to reserved places
-      die "Specification violation: Can't assign '$ns' to prefix 'xml'"
+      croak "Specification violation: Can't assign '$ns' to prefix 'xml'"
         if $prefix eq "xml" && $ns ne 'http://www.w3.org/XML/1998/namespace';
-      die "Specification violation: Can't assign 'http://www.w3.org/2000/xmlns/' to any prefix"
+      croak "Specification violation: Can't assign 'http://www.w3.org/2000/xmlns/' to any prefix"
         if $ns eq 'http://www.w3.org/2000/xmlns/';
 
       # check we're not assigning things to the xmlns prefix
-      die "Specification violation: Can't assign any namespace to prefix 'xmlns'"
+      croak "Specification violation: Can't assign any namespace to prefix 'xmlns'"
         if $prefix eq 'xmlns';
 
       # copy the hash if we haven't done so already
@@ -142,7 +144,7 @@ of this function.
 
     # munge the prefix on the main element
     $element->type_name =~ /\A([^:]+)(?::(.*))?\z/msx
-      or die "Invalid element name '".$element->type_name."'";
+      or croak "Invalid element name '".$element->type_name."'";
     my $prefix     = defined ($2) ? $1 : "";
     my $local_name = defined ($2) ? $2 : $1;
 
@@ -157,7 +159,7 @@ of this function.
       $new_element_prefix = $assigned_ns->{""} = "";
     } else {
       $element_ns = $known_prefixes->{ $prefix };
-      unless (defined $element_ns) { die "Prefix '$prefix' has no registered namespace" }
+      unless (defined $element_ns) { croak "Prefix '$prefix' has no registered namespace" }
       $new_element_prefix = $assigned_ns->{ $element_ns };
     }
     my $new_element_name = (length $new_element_prefix) ? "$new_element_prefix:$local_name" : $local_name;
@@ -166,7 +168,7 @@ of this function.
     my $new_attr = {};
     foreach (keys %{ $attr }) {
       /\A([^:]+)(?::(.*))?\z/msx
-        or die "Invalid attribute name '$_'";
+        or croak "Invalid attribute name '$_'";
       my $prefix     = defined ($2) ? $1 : "";
       my $local_name = defined ($2) ? $2 : $1;
 
@@ -177,7 +179,7 @@ of this function.
       # map the prefix in the source document to a namespace,
       # then look up the corrisponding prefix in the destination document
       my $ns = $prefix eq "" ? $element_ns : $known_prefixes->{ $prefix };
-      unless (defined $ns) { die "Prefix '$prefix' has no registered namespace" }
+      unless (defined $ns) { croak "Prefix '$prefix' has no registered namespace" }
       my $new_prefix = $assigned_ns->{ $ns };
 
       my $final_name = ($new_prefix ne $new_element_prefix) ? "$new_prefix:$local_name" : $local_name;
