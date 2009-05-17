@@ -5,7 +5,7 @@ name           'XML-Easy-Transform-RationalizeNamespacePrefixes';
 all_from       'lib/XML/Easy/Transform/RationalizeNamespacePrefixes.pm';
 
 requires       'XML::Easy'  => '0.003';
-requires       'Carp::Clan' => '0'
+requires       'Carp::Clan' => '0';
 test_requires  'Test::More' => '0';
 
 license 'perl';
