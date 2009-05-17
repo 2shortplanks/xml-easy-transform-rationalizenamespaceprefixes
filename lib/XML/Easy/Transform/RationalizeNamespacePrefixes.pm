@@ -83,7 +83,7 @@ of this function.
     # tree with a new element that is the same as the top element of the tree but
     # with the needed namespace declarations
 
-    my $attr = { %{ $dest_element->attributes }, map {  
+    my $attr = { %{ $dest_element->attributes }, map {
       ($_ ne "") ? ("xmlns:$_" => $assigned_prefixes{$_}) :
         ($assigned_prefixes{""} ne "") ? ( xmlns => $assigned_prefixes{""} ) : ()
     } keys %assigned_prefixes };
@@ -143,10 +143,10 @@ of this function.
     }
 
     # munge the prefix on the main element
-    $element->type_name =~ /\A([^:]+)(?::(.*))?\z/msx
+    my ($efront, $eback) = $element->type_name =~ /\A([^:]+)(?::(.*))?\z/msx
       or croak "Invalid element name '".$element->type_name."'";
-    my $prefix     = defined ($2) ? $1 : "";
-    my $local_name = defined ($2) ? $2 : $1;
+    my $prefix     = defined ($eback) ? $efront : "";
+    my $local_name = defined ($eback) ? $eback  : $efront;
 
     # map the prefix in the source document to a namespace,
     # then look up the corrisponding prefix in the destination document
@@ -167,10 +167,10 @@ of this function.
     # munge the prefix on the attribute elements
     my $new_attr = {};
     foreach (keys %{ $attr }) {
-      /\A([^:]+)(?::(.*))?\z/msx
+      my ($afront, $aback) = /\A([^:]+)(?::(.*))?\z/msx
         or croak "Invalid attribute name '$_'";
-      my $prefix     = defined ($2) ? $1 : "";
-      my $local_name = defined ($2) ? $2 : $1;
+      my $prefix     = defined ($aback) ? $afront : "";
+      my $local_name = defined ($aback) ? $aback  : $afront;
 
       # skip the namespaces
       next if $prefix eq "" && $local_name eq "xmlns";
