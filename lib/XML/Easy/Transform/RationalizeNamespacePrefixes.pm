@@ -25,8 +25,8 @@ XML::Easy::Transform::RationalizeNamespacePrefixes - rationalize namespaces pref
 
 =head1 DESCRIPTION
 
-This code creates a new tree of XML::Easy::Element nodes by examining
-an existing XML::Easy::Element tree and producing a new tree that is
+This code creates a new tree of B<XML::Easy::Element> nodes by examining
+an existing B<XML::Easy::Element> tree and producing a new tree that is
 schemantically identical under the XML Namespaces 1.0 specification
 but with all namespace declartions moved to the top node of the tree
 (this may involve renaming several elements in the tree to have different
@@ -43,12 +43,14 @@ exported on request:
 
 The first argument is a B<XML::Easy::Element> that you wish a transformed
 copy of to be returned.  An exception will be thrown if thrown if the
-XML document breaches the XML Namespaces 1.0 specification.
+XML document is not namespace-well-formed (i.e. it breaches the XML
+Namespaces 1.0 specification.)
 
 The second (optional) argument is a reference to a function that should,
-when passed a string containing a xml prefix as its first argument, will
+when passed a string containing a xml prefix as its first argument,
 return a string containing an alternative xml prefix.  If no function is
-passed in then the default implementation is used.
+passed in then the default renaming function is used, which will append
+or replace trailing numbers with higher numbers to the prefix.
 
 The new B<XML::Easy::Element> will be returned as the only return value
 of this function.
@@ -246,21 +248,8 @@ Moves the namespace up and prints:
 
 =head2 Creating Prefixes
 
-The routine will also create prefixes as needed:
-
-  print process <<'XML';
-  <foo>
-    <bar xmlns="http://www.twoshortplanks.com/namespace/example/1" />
-  </foo>
-  XML
-
-Prints
-
-  <foo xmlns:default2="http://www.twoshortplanks.com/namespace/example/1">
-    <default2:bar />
-  </foo>
-
-It even copes with conflicting prefixes:
+If you use the same prefix twice in the document to refer to different namespaces
+then the function will rename one of the prefixes:
 
   print process <<'XML';
   <muppet:kermit xmlns:muppet="http://www.twoshortplanks.com/namespace/example/muppetshow">
@@ -274,9 +263,42 @@ Prints
     <muppet2:kermit />
   </muppet:kermit>
 
+This works for the default namespace too:
+
+  print process <<'XML';
+  <foo>
+    <bar xmlns="http://www.twoshortplanks.com/namespace/example/1" />
+  </foo>
+  XML
+
+Prints
+
+  <foo xmlns:default2="http://www.twoshortplanks.com/namespace/example/1">
+    <default2:bar />
+  </foo>
+
+If you want control on how your prefixes will be renamed you can supply
+a function as the second arguement to C<rationalize_namespace_prefixes>.
+
+  my $transformed = rationalize_namespace_prefixes(
+    $xml_easy_element,
+    sub { 
+      my $name = shift;
+      $name =~ s/\d+\Z//;
+      return $name . int(rand(10000));
+    }
+  );
+
+If your function returns a prefix that has already been used it will be
+called again and again until it returns an unused prefix.  The first time
+the function is called it will be passed the prefix from the source, and
+if it is called subsequent times after that because the new prefix it
+previously returned is already in use it will be passed the prefix the
+previous call to the function created.
+
 =head2 Removing Unneeded Prefixes
 
-This module also removes all unnecessary prefixes on attributes:
+This module also removes all unnecessary prefixes:
 
   <wobble xmlns:ex1="http://www.twoshortplanks.com/namespace/example/1">
     <ex1:wibble ex1:jelly="in my tummy" />
@@ -290,6 +312,8 @@ Will be transformed into
     <ex1:bobble />
   </wobble>
 
+This said, please note that this module will not replace 
+
 =head1 AUTHOR
 
 Written by Mark Fowler E<lt>mark@twoshortplanks.comE<gt>
@@ -301,7 +325,11 @@ and/or modify it under the same terms as Perl itself.
 
 =head1 BUGS
 
-None known.
+This module does not accept prefixes xml<something>, as defined by the spec
+
+This module does not throw errors if you use an name with more than one colon in it
+
+This module does not enforce the uniqueness of attributes correctly
 
 Please see http://www.twoshortplanks.com/project/xml-easy-transform-rationalizenamespaceprefix
 for details of how to submit bugs, access the source control
