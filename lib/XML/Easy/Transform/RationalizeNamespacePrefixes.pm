@@ -175,20 +175,20 @@ of this function.
     foreach (keys %{ $attr }) {
       my ($afront, $aback) = /\A([^:]+)(?::(.*))?\z/msx
         or croak "Invalid attribute name '$_'";
-      my $prefix     = defined ($aback) ? $afront : "";
-      my $local_name = defined ($aback) ? $aback  : $afront;
+      my $aprefix     = defined ($aback) ? $afront : "";
+      my $alocal_name = defined ($aback) ? $aback  : $afront;
 
       # skip the namespaces
-      next if $prefix eq "" && $local_name eq "xmlns";
-      next if $prefix eq "xmlns";
+      next if $aprefix eq "" && $alocal_name eq "xmlns";
+      next if $aprefix eq "xmlns";
 
       # map the prefix in the source document to a namespace,
       # then look up the corrisponding prefix in the destination document
-      my $ns = $prefix eq "" ? $element_ns : $known_prefixes->{ $prefix };
-      unless (defined $ns) { croak "Prefix '$prefix' has no registered namespace" }
+      my $ns = $aprefix eq "" ? $element_ns : $known_prefixes->{ $aprefix };
+      unless (defined $ns) { croak "Prefix '$aprefix' has no registered namespace" }
       my $new_prefix = $assigned_ns->{ $ns };
 
-      my $final_name = ($new_prefix ne $new_element_prefix) ? "$new_prefix:$local_name" : $local_name;
+      my $final_name = ($new_prefix ne $new_element_prefix) ? "$new_prefix:$alocal_name" : $alocal_name;
       $new_attr->{ $final_name } = $attr->{ $_ };
 
     }
