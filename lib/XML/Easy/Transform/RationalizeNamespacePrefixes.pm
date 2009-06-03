@@ -327,22 +327,6 @@ and/or modify it under the same terms as Perl itself.
 
 =head1 BUGS
 
-This module currently prefers the default namespace even in situations where
-using it violates the specification.  For example:
-
-  <foo xmlns="http://www.twoshotplanks.com/namespace/example/1">
-    <ex:xmlfoo xmlns:ex="xmlns="http://www.twoshotplanks.com/namespace/example/1">
-  </foo>
-
-Will be errornously trasnformed into the following document that now
-contains a reserved xml element
-
-  <foo xmlns="http://www.twoshotplanks.com/namespace/example/1">
-    <xmlfoo/>
-  </foo>
-
-This module does not enforce the uniqueness of attributes correctly
-
 Please see http://www.twoshortplanks.com/project/xml-easy-transform-rationalizenamespaceprefix
 for details of how to submit bugs, access the source control
 for this project, and contact the author.
