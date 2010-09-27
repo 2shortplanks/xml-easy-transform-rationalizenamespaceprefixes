@@ -3,7 +3,8 @@
 use strict;
 use warnings;
 
-use Test::More tests => 16;
+use Test::More tests => 19;
+use Test::XML::Easy;
 
 use XML::Easy::Text qw(xml10_read_document xml10_write_element);
 use XML::Easy::Transform::RationalizeNamespacePrefixes qw(
@@ -11,11 +12,9 @@ use XML::Easy::Transform::RationalizeNamespacePrefixes qw(
 );
 
 sub process($) {
-  return xml10_write_element(
-    rationalize_namespace_prefixes(
-      xml10_read_document( $_[0] )
-    ),
-  );
+  return rationalize_namespace_prefixes(
+    xml10_read_document( $_[0] )
+  ),
 }
 
 sub chompp($) {
@@ -24,7 +23,7 @@ sub chompp($) {
   return $thingy;
 }
 
-is process <<'XML', chompp <<'XML', "move up";
+is_xml process <<'XML', <<'XML', { show_xml => 1, ignore_whitespace => 1, description => "move up"};
 <foo>
   <ex1:bar xmlns:ex1="http://www.photobox.com/namespace/example1" />
 </foo>
@@ -34,7 +33,7 @@ XML
 </foo>
 XML
 
-is process <<'XML', chompp <<'XML', "default";
+is_xml process <<'XML', <<'XML', { show_xml => 1, ignore_whitespace => 1, description => "default"};
 <foo>
   <bar xmlns="http://www.photobox.com/namespace/example1">
     <bazz zing="zang">
@@ -52,7 +51,7 @@ XML
 </foo>
 XML
 
-is process <<'XML', chompp <<'XML', "muppet";
+is_xml process <<'XML', <<'XML', { show_xml => 1, ignore_whitespace => 1, description => "muppet"};
 <muppet:kermit xmlns:muppet="http://www.photobox.com/namespace/example/muppetshow" >
   <muppet:kermit xmlns:muppet="http://www.photobox.com/namespace/example/seasmestreet"/>
 </muppet:kermit>
@@ -62,7 +61,7 @@ XML
 </muppet:kermit>
 XML
 
-is process <<'XML', chompp <<'XML', "lost attribute prefix";
+is_xml process <<'XML', <<'XML', { show_xml => 1, ignore_whitespace => 1, description => "lost attribute prefix"};
 <wobble xmlns:ex1="http://www.twoshortplanks.com/namespace/example/1" xmlns:ex1also="http://www.twoshortplanks.com/namespace/example/1">
   <ex1:wibble ex1:jelly="in my tummy" ex1also:yum="yum yum"/>
 </wobble>
@@ -72,7 +71,7 @@ XML
 </wobble>
 XML
 
-is process <<'XML', chompp <<'XML', "no prefix in on attribute in src";
+is_xml process <<'XML', <<'XML', { show_xml => 1, ignore_whitespace => 1, description => "no prefix in on attribute in src"};
 <a xmlns:ex1="http://www.twoshortplanks.com/namespaces/example/1" xmlns:ex1also="http://www.twoshortplanks.com/namespaces/example/1">
   <ex1:b local="for local people" ex1also:alsolocal="as well"/>
 </a>
@@ -82,7 +81,7 @@ XML
 </a>
 XML
 
-is process <<'XML', chompp <<'XML', "no default till later";
+is_xml process <<'XML', <<'XML', { show_xml => 1, ignore_whitespace => 1, description => "no default till later"};
 <ex1:a xmlns:ex1="http://www.twoshortplanks.com/namespaces/example/1">
   <b xmlns="http://www.twoshortplanks.com/namespaces/example/2"/>
 </ex1:a>
@@ -92,7 +91,7 @@ XML
 </ex1:a>
 XML
 
-is process <<'XML', chompp <<'XML', "multiple prefixes => 1 prefix";
+is_xml process <<'XML', <<'XML', { show_xml => 1, ignore_whitespace => 1, description => "multiple prefixes => 1 prefix"};
 <a>
   <ex3:c xmlns:ex3="http://www.twoshortplanks.com/namespaces/example/3">
      <ex3also:c xmlns:ex3also="http://www.twoshortplanks.com/namespaces/example/3"/>
@@ -108,7 +107,7 @@ XML
 </a>
 XML
 
-is process <<'XML', chompp <<'XML', "multiple overloaded prefixes";
+is_xml process <<'XML', <<'XML', { show_xml => 1, ignore_whitespace => 1, description => "multiple overloaded prefixes"};
 <a>
   <ns:b xmlns:ns="http://www.twoshortplanks.com/namespaces/example/1">
      <ns:c xmlns:ns="http://www.twoshortplanks.com/namespaces/example/2">
@@ -127,6 +126,46 @@ XML
   <ns3:e/>
 </a>
 XML
+
+is_xml rationalize_namespace_prefixes(xml10_read_document(<<'XML'), { namespaces => { 'http://www.twoshortplanks.com/namespaces/example/1' => "zippy"} }), <<'XML', { show_xml => 1, ignore_whitespace => 1, description => "forced prefix"};
+<a>
+  <ns:b xmlns:ns="http://www.twoshortplanks.com/namespaces/example/1">
+     <ns:c xmlns:ns="http://www.twoshortplanks.com/namespaces/example/2">
+       <ns:d />
+     </ns:c>
+  </ns:b>
+  <ns:e xmlns:ns="http://www.twoshortplanks.com/namespaces/example/3"/>
+</a>
+XML
+<a xmlns:zippy="http://www.twoshortplanks.com/namespaces/example/1" xmlns:ns="http://www.twoshortplanks.com/namespaces/example/2" xmlns:ns2="http://www.twoshortplanks.com/namespaces/example/3">
+  <zippy:b>
+     <ns:c>
+       <ns:d/>
+     </ns:c>
+  </zippy:b>
+  <ns2:e/>
+</a>
+XML
+
+is_xml rationalize_namespace_prefixes(xml10_read_document(<<'XML'), { force_attribute_prefix => 1 }), <<'XML', { show_xml => 1, ignore_whitespace => 1, description => "forced attribute prefix"};
+<doc xmlns:muppetshow="http://www.twoshortplanks.com/namespaces/example/muppetshow" xmlns:sesamestreet="http://www.twoshortplanks.com/namespaces/example/sesamestreet">
+  <sesamestreet:cast burt="1" ernie="1" muppetshow:kermit="1" />
+</doc>
+XML
+<doc xmlns:muppetshow="http://www.twoshortplanks.com/namespaces/example/muppetshow" xmlns:sesamestreet="http://www.twoshortplanks.com/namespaces/example/sesamestreet">
+  <sesamestreet:cast sesamestreet:burt="1" sesamestreet:ernie="1" muppetshow:kermit="1" />
+</doc>
+XML
+
+is_xml rationalize_namespace_prefixes(xml10_read_document(<<'XML'), { force_attribute_prefix => 1 }), <<'XML', { show_xml => 1, ignore_whitespace => 1, description => "forced attribute prefix 2"};
+<doc foo="1" bar="2" />
+XML
+<doc foo="1" bar="2" />
+XML
+
+########################################################################
+# error cases
+########################################################################
 
 eval {
   process <<'XML'

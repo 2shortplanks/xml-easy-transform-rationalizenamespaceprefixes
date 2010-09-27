@@ -4,7 +4,7 @@ use base qw(Exporter);
 use strict;
 use warnings;
 
-our $VERSION = "1.00";
+our $VERSION = "1.21";
 our @EXPORT_OK;
 
 use Carp::Clan;
@@ -41,16 +41,45 @@ exported on request:
 
 =item rationalize_namespace_prefixes($easy_element, $generator_subref)
 
+=item rationalize_namespace_prefixes($easy_element, $options_hashref)
+
 The first argument is a B<XML::Easy::Element> that you wish a transformed
 copy of to be returned.  An exception will be thrown if thrown if the
 XML document is not namespace-well-formed (i.e. it breaches the XML
 Namespaces 1.0 specification.)
 
-The second (optional) argument is a reference to a function that should,
+The second (optional) argument may be a reference to a function that should,
 when passed a string containing a xml prefix as its first argument,
 return a string containing an alternative xml prefix.  If no function is
 passed in then the default renaming function is used, which will append
 or replace trailing numbers with higher numbers to the prefix.
+
+Alternativly, a hashref may be passed as the (optional) second arguement.
+The keys of this hash may be:
+
+=over
+
+=item generator
+
+The prefix generating subroutine reference, as previously described.
+
+=item namespaces
+
+A hashref containing a mapping of namespace to prefixes that you want
+to force to be declared.  This enables you to control exactly what
+prefixes are used for what namespaces and to force additional namespace
+declarations for namespaces not otherwise mentioned in the XML
+document you are transforming.  Specifying more than one namespace that
+maps to the same prefix will cause an exception to be thrown.
+
+=item force_attribute_prefix
+
+By default attributes without a prefix have the same namespace as the
+element that they belong to.  Setting this to a true value will force
+prefixes to be prepended to attribute names even if they could be
+ommited.
+
+=back
 
 The new B<XML::Easy::Element> will be returned as the only return value
 of this function.
@@ -69,17 +98,37 @@ of this function.
 
   # this holds the namespaces that we've assigned.
 
-  sub rationalize_namespace_prefixes ($;&) {
+  sub rationalize_namespace_prefixes ($;$) {
     my $source_element = shift;
-    my $prefix_generator = shift || \&_prefix_generator;
+
+    # optional argument parsing
+
+    my $args = @_ ? shift : {};
+    $args = { generator => $args } if ref($args) eq "CODE";
+    croak "Invalid second parameter passed to rationalize_namespace_prefixes: must be hashref or subroutine reference"
+      unless ref($args) eq "HASH";
+
+    my $prefix_generator = exists $args->{generator} ? $args->{generator} : \&_prefix_generator;
+    croak "Argument 'generator' must be a subroutine reference"
+      unless ref($prefix_generator) eq "CODE";
+
+    my $force_attr_prefixd_namespaces = exists $args->{namespaces} ? $args->{namespaces} : {};
+    croak "Argument 'namespaces' must be a hash reference"
+      unless ref($force_attr_prefixd_namespaces) eq "HASH";
 
     # create the modified tree and populate our two local hashes with
     # the namespaces we should have
 
     my %assigned_prefixes;
     my %assigned_ns;
+    foreach my $ns (keys %{ $force_attr_prefixd_namespaces }) {
+      $assigned_ns{ $ns } = $force_attr_prefixd_namespaces->{ $ns };
+      croak("Cannot assign namespace '$ns' to prefix '$force_attr_prefixd_namespaces->{ $ns }' as already assigned to '$assigned_prefixes{ $force_attr_prefixd_namespaces->{ $ns } }'")
+        if exists $assigned_prefixes{ $force_attr_prefixd_namespaces->{ $ns } };
+      $assigned_prefixes{ $force_attr_prefixd_namespaces->{ $ns } } = $ns;
+    }
 
-    my $dest_element = _rnp($source_element, $prefix_generator, \%default_known_prefixes, \%assigned_prefixes, \%assigned_ns);
+    my $dest_element = _rnp($source_element, $prefix_generator, \%default_known_prefixes, \%assigned_prefixes, \%assigned_ns, $args->{force_attribute_prefix});
 
     # we now have a tree with *no* namespaces.  Replace the top of that
     # tree with a new element that is the same as the top element of the tree but
@@ -102,6 +151,7 @@ of this function.
     my $known_prefixes    = shift;
     my $assigned_prefixes = shift;
     my $assigned_ns       = shift;
+    my $force_attr_prefix      = shift;
 
     # boolean that indicates if known_* is our copy or the
     # version passed in (has it been copy-on-write-ed)
@@ -188,7 +238,7 @@ of this function.
       unless (defined $ns) { croak "Prefix '$aprefix' has no registered namespace" }
       my $new_prefix = $assigned_ns->{ $ns };
 
-      my $final_name = ($new_prefix ne $new_element_prefix) ? "$new_prefix:$alocal_name" : $alocal_name;
+      my $final_name = (($force_attr_prefix && length $new_prefix) || $new_prefix ne $new_element_prefix) ? "$new_prefix:$alocal_name" : $alocal_name;
       $new_attr->{ $final_name } = $attr->{ $_ };
 
     }
@@ -198,7 +248,7 @@ of this function.
     while (@content) {
       push @new_content, shift @content;
       if (@content) {
-        push @new_content, _rnp((shift @content), $prefix_generator, $known_prefixes, $assigned_prefixes, $assigned_ns);
+        push @new_content, _rnp((shift @content), $prefix_generator, $known_prefixes, $assigned_prefixes, $assigned_ns, $force_attr_prefix);
       }
     }
 
@@ -284,7 +334,7 @@ a function as the second arguement to C<rationalize_namespace_prefixes>.
 
   my $transformed = rationalize_namespace_prefixes(
     $xml_easy_element,
-    sub { 
+    sub {
       my $name = shift;
       $name =~ s/\d+\Z//;
       return $name . int(rand(10000));
@@ -313,8 +363,6 @@ Will be transformed into
     <ex1:wibble jelly="in my tummy" />
     <ex1:bobble />
   </wobble>
-
-This said, please note that this module will not replace 
 
 =head1 AUTHOR
 
