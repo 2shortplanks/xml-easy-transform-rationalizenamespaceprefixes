@@ -1,6 +1,10 @@
+1.22
+
+* RT#59271: Fix for the same namespace repeated (thanks to Dagfinn Ilmari Mannsaker for patch)
+
 1.21
 
-* Add missing testing dependancy (thanks to Andreas Koenig for reporting via RT)
+* RT#52140: Add missing testing dependancy (thanks to Andreas Koenig for reporting via RT) 
 
 1.20 
 

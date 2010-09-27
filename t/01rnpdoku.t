@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 19;
+use Test::More tests => 21;
 use Test::XML::Easy;
 
 use XML::Easy::Text qw(xml10_read_document xml10_write_element);
@@ -161,6 +161,26 @@ is_xml rationalize_namespace_prefixes(xml10_read_document(<<'XML'), { force_attr
 <doc foo="1" bar="2" />
 XML
 <doc foo="1" bar="2" />
+XML
+
+is_xml rationalize_namespace_prefixes(xml10_read_document(<<'XML')), <<'XML', { show_xml => 1, ignore_whitespace => 1, description => "non-default namespace repeated" };
+<ns1:a xmlns:ns1="http://example.org/ns/1">
+  <ns2:b xmlns:ns2="http://example.org/ns/1"/>
+</ns1:a>
+XML
+<ns1:a xmlns:ns1="http://example.org/ns/1">
+  <ns1:b/>
+</ns1:a>
+XML
+
+is_xml rationalize_namespace_prefixes(xml10_read_document(<<'XML')), <<'XML', { show_xml => 1, ignore_whitespace => 1, description => "default namespace repeated" };
+<a xmlns="http://example.org/ns/1">
+  <ns:b xmlns:ns="http://example.org/ns/1"/>
+</a>
+XML
+<a xmlns="http://example.org/ns/1">
+  <b/>
+</a>
 XML
 
 ########################################################################

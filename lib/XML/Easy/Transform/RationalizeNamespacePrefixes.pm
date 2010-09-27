@@ -4,7 +4,7 @@ use base qw(Exporter);
 use strict;
 use warnings;
 
-our $VERSION = "1.21";
+our $VERSION = "1.22";
 our @EXPORT_OK;
 
 use Carp::Clan;
@@ -185,7 +185,7 @@ of this function.
       # record that this prefix maps to this namespace;
       $known_prefixes->{ $prefix } = $ns;
 
-      unless ($assigned_ns->{ $ns }) {
+      unless (exists $assigned_ns->{ $ns }) {
         # find an unused unique prefix in the destination.
         while (exists $assigned_prefixes->{ $prefix }) {
           $prefix = $prefix_generator->($prefix);
