@@ -375,9 +375,11 @@ and/or modify it under the same terms as Perl itself.
 
 =head1 BUGS
 
-Please see http://www.twoshortplanks.com/project/xml-easy-transform-rationalizenamespaceprefix
-for details of how to submit bugs, access the source control
-for this project, and contact the author.
+None known.
+
+Please report bugs via RT L<https://rt.cpan.org/Ticket/Create.html?Queue=XML-Easy-Transform-RationalizeNamespacePrefixes>.
+
+The version control system for this module is hosted on github.  Please feel free to fork L<http://github.com/2shortplanks/xml-easy-transform-rationalizenamespaceprefixes> and send pull requests.
 
 =head1 SEE ALSO
 
